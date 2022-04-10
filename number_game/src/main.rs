@@ -1,86 +1,71 @@
 extern crate rand;
 
 use std::fs::File;
-use std::io::BufReader;
-use std::io::prelude::*;
+use std::io::{prelude::*, Error};
 use std::collections::HashMap;
-use std::env::current_dir;
-// use rand::Rng;
 
+#[derive(Debug)]
 struct Question {
     number: u64,
     question: String,
     next: Option<u64>,
 }
 
-fn pick_restored(questions: HashMap<u64, Question>, num: u64) -> &'static Question {
-    let q = questions.get(&num).unwrap();
-    return q;
+fn update_qcands(map: &mut HashMap<u64, Question>, n: u64, q: String) -> HashMap<u64, Question> {
+    let new_q = Question {
+        number: n,
+        question: q,
+        next: None,
+    };
+
+    map.insert(n, new_q);
+    return map;
 }
 
-fn pick_nonrestored(questions: HashMap<u64, Question>, num: u64, q_len: u64) -> &'static Question {
-    // If the Question is used, set the question's next to other question's number.
-    // If the Question is not used, next is -1 (or None maybe?).
-    // If the question's next is not -1 (or not None), then follow the next till its not -1.
-
-    let mut current = num;
-    let mut q = questions.get(&current).unwrap();
-    loop {
-        match q.next {
-            None => break,
+fn remove_qcand(map: &mut HashMap<u64, Question>, n: u64) -> Result<HashMap<u64, Question>, String> {
+    let length = map.keys().len() as u64;
+    let mut idx = n;
+    let mut given_q: Option<String> = None;
+    while let Some(q) = map.get_mut(&idx) {
+        if let None = given_q {
+            given_q = Some((*q).question.to_string());
+            idx = (n + 1) % length;
+            continue;
+        }
+        match (*q).next {
             Some(nxt) => {
-                q = questions.get(&nxt).unwrap();
-                current = nxt;
-            }
+                idx = nxt;
+                continue;
+            },
+            None => {
+                let updated = Question {
+                    number: n,
+                    question: given_q.unwrap(),
+                    next: Some(idx),
+                };
+                map.insert(n, updated);
+                return Ok(map);
+            },
         }
     }
-    // let new_q = Question {
-    //     number: current,
-    //     question: q.question,
-    //     next: Some((current + 1) % q_len),
-    // };
-    questions.insert(
-        current,
-        Question {
-            number: current,
-            question: q.question.to_string(),
-            next: Some((current + 1) % q_len),
-        },
-    );
-    return q;
+    return Err(format!("No key {n} in the map").to_string());
+}
+
+fn read_file(filename: String) -> Result<File, Error> {
+    let mut file = File::open(filename)?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+
+    return Ok(file);
 }
 
 fn main() {
-    let filename = format!(
-        "{}/questions.txt",
-        current_dir().unwrap().into_os_string().into_string().unwrap()
-    );
-    let mut file = File::open(filename)
-    .expect("Cannot open the file.");
+    let mut question_cands: HashMap<u64, Question> = HashMap::new();
+    update_qcands(&mut question_cands, 0, "Name".to_string());
+    update_qcands(&mut question_cands, 1, "Gender".to_string());
+    update_qcands(&mut question_cands, 2, "Age".to_string());
 
-    let mut buf_reader = BufReader::new(file);
-    let mut contents = String::new();
-    buf_reader.read_to_string(&mut contents)
-    .expect("Cannot read the file to buffer.");
-
-    println!("With text:\n{}", contents);
-
-    // let question_cands = HashMap::from([
-
-    // ]);
+    remove_qcand(&mut question_cands, 2);
+    
+    println!("{:?}", question_cands)
 }
-
-
-// use std::collections::HashMap;
-
-// fn main() {
-//     let mut scores = HashMap::new();
-
-//     scores.insert(String::from("Blue"), 10);
-//     scores.insert(String::from("Yellow"), 50);
-
-//     let team_name = String::from("Blue");
-//     println!("{}", scores.get(&team_name).unwrap());
-//     println!("{}", scores.get(&team_name).unwrap());
-//     println!("{}", scores.get(&team_name).unwrap());
-// }
