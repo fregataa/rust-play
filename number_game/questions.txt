@@ -1,4 +1,0 @@
-1. Age
-2. Gender
-3. Height
-4. Weight
