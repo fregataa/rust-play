@@ -1,26 +1,18 @@
 extern crate rand;
 
 use std::fs::File;
+use std::io;
 use std::io::BufReader;
 use std::io::prelude::*;
 use std::collections::HashMap;
+
+use rand::Rng;
 
 #[derive(Debug)]
 struct Question {
     number: u64,
     question: String,
     next: Option<u64>,
-}
-
-fn read_file(filename: String) -> std::io::Result<String> {
-    // file must be located in the same level with src directory.
-
-    let file = File::open(filename)?;
-    let mut buf_reader = BufReader::new(file);
-    let mut contents = String::new();
-    buf_reader.read_to_string(&mut contents)?;
-
-    return Ok(contents);
 }
 
 fn update_qcands(map: &mut HashMap<u64, Question>, n: u64, q: String) -> &mut HashMap<u64, Question> {
@@ -34,7 +26,7 @@ fn update_qcands(map: &mut HashMap<u64, Question>, n: u64, q: String) -> &mut Ha
     return map;
 }
 
-fn make_qmap_from_file(filename: String) -> std::io::Result<HashMap<u64, Question>> {
+fn make_qmap_from_file(filename: String) -> std::io::Result<(HashMap<u64, Question>, u64)> {
     let mut question_cands: HashMap<u64, Question> = HashMap::new();
 
     let file = File::open(filename)?;
@@ -58,36 +50,13 @@ fn make_qmap_from_file(filename: String) -> std::io::Result<HashMap<u64, Questio
         map_idx += 1;
     }
 
-    return Ok(question_cands);
+    return Ok((question_cands, map_idx));
 }
 
-fn remove_qcand(map: &mut HashMap<u64, Question>, n: u64) -> Result<(), String> {
-    let length = map.keys().len() as u64;
-    let mut idx = n;
-    let mut given_q: Option<String> = None;
-    while let Some(q) = map.get_mut(&idx) {
-        if let None = given_q {
-            given_q = Some((*q).question.to_string());
-            idx = (n + 1) % length;
-            continue;
-        }
-        match (*q).next {
-            Some(nxt) => {
-                idx = nxt;
-                continue;
-            },
-            None => {
-                let updated = Question {
-                    number: n,
-                    question: given_q.unwrap(),
-                    next: Some(idx),
-                };
-                map.insert(n, updated);
-                return Ok(());
-            },
-        }
-    }
-    return Err(format!("No key {n} in the map").to_string());
+fn remove_qcand(map: &mut HashMap<u64, Question>, removed: u64, target: u64) -> Result<(), ()> {
+    let mut removed_q = map.get_mut(&removed).unwrap();
+    (*removed_q).next = Some(target);
+    return Ok(());
 }
 
 fn get_qcand(map: &HashMap<u64, Question>, n: u64) -> Result<&Question, String> {
@@ -103,10 +72,30 @@ fn get_qcand(map: &HashMap<u64, Question>, n: u64) -> Result<&Question, String> 
             },
         }
     }
-    return Err(format!("No key {n} in the map").to_string());
+    return Err(format!("Cannot get key {n} in the map").to_string());
 }
 
 fn main() {
-    let mut question_cands = make_qmap_from_file("test.txt".to_string()).unwrap();
-    println!("{:?}", question_cands);
+    let (mut question_cands, q_len) = make_qmap_from_file("test.txt".to_string()).unwrap();
+    let cands_length = question_cands.keys().len() as u64 - 1;
+    let mut rng = rand::thread_rng();
+
+    loop {
+        println!("Press Enter if you want to proceed ...");
+        io::stdin().read_line(&mut "".to_string())
+        .expect("Failed to proceed");
+
+        let rand_idx = rng.gen_range(1..(q_len + 1));
+        println!("rand_idx = {}", rand_idx);
+        let cur_q = get_qcand(&question_cands, rand_idx).unwrap();
+        let q_num = (*cur_q).number;
+        println!("=============\nQuestion {}.", q_num);
+        println!("{}", (*cur_q).question);
+        println!("");
+
+        let target_qnum = get_qcand(&question_cands, (q_num + 1)%cands_length).unwrap();
+        if let Some(target) = (*target_qnum).next {
+            remove_qcand(&mut question_cands, q_num, target).unwrap();
+        }
+    }
 }
