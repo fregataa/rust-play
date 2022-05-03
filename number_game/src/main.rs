@@ -26,7 +26,7 @@ fn update_qcands(map: &mut HashMap<u64, Question>, n: u64, q: String) -> &mut Ha
     return map;
 }
 
-fn make_qmap_from_file(filename: String) -> std::io::Result<(HashMap<u64, Question>, u64)> {
+fn make_qmap_from_file(filename: String) -> std::io::Result<HashMap<u64, Question>> {
     let mut question_cands: HashMap<u64, Question> = HashMap::new();
 
     let file = File::open(filename)?;
@@ -50,7 +50,7 @@ fn make_qmap_from_file(filename: String) -> std::io::Result<(HashMap<u64, Questi
         map_idx += 1;
     }
 
-    return Ok((question_cands, map_idx));
+    return Ok(question_cands);
 }
 
 fn remove_qcand(map: &mut HashMap<u64, Question>, removed: u64, target: u64) -> Result<(), ()> {
@@ -76,8 +76,8 @@ fn get_qcand(map: &HashMap<u64, Question>, n: u64) -> Result<&Question, String> 
 }
 
 fn main() {
-    let (mut question_cands, q_len) = make_qmap_from_file("test.txt".to_string()).unwrap();
-    let cands_length = question_cands.keys().len() as u64 - 1;
+    let mut question_cands = make_qmap_from_file("test.txt".to_string()).unwrap();
+    let cands_length = question_cands.keys().len() as u64;
     let mut rng = rand::thread_rng();
 
     loop {
@@ -85,17 +85,25 @@ fn main() {
         io::stdin().read_line(&mut "".to_string())
         .expect("Failed to proceed");
 
-        let rand_idx = rng.gen_range(1..(q_len + 1));
-        println!("rand_idx = {}", rand_idx);
-        let cur_q = get_qcand(&question_cands, rand_idx).unwrap();
+        let q_len = &cands_length;
+        let rand_idx = rng.gen_range(1..*q_len);
+        let cands_r = &question_cands;
+        let cur_q = get_qcand(cands_r, rand_idx).unwrap();
         let q_num = (*cur_q).number;
+
         println!("=============\nQuestion {}.", q_num);
         println!("{}", (*cur_q).question);
         println!("");
 
-        let target_qnum = get_qcand(&question_cands, (q_num + 1)%cands_length).unwrap();
-        if let Some(target) = (*target_qnum).next {
-            remove_qcand(&mut question_cands, q_num, target).unwrap();
+        let cands_r = &question_cands;
+        let q_len = &cands_length;
+        let target_qnum = (*get_qcand(cands_r, (q_num + 1) % *q_len).unwrap()).number;
+        let cands_r = &mut question_cands;
+        if q_num == target_qnum {
+            println!("All questions have been used !!");
+            println!("Finishing.");
+            break;
         }
+        remove_qcand(cands_r, q_num, target_qnum).unwrap();
     }
 }
