@@ -52,10 +52,9 @@ fn make_qmap_from_file(filename: &str) -> std::io::Result<HashMap<u64, Question>
     return Ok(question_cands);
 }
 
-fn remove_qcand(map: &mut HashMap<u64, Question>, removed: u64, target: u64) -> Result<(), ()> {
+fn remove_qcand(map: &mut HashMap<u64, Question>, removed: u64, target: u64) {
     let mut removed_q = map.get_mut(&removed).unwrap();
     (*removed_q).next = Some(target);
-    return Ok(());
 }
 
 fn get_qcand(map: &HashMap<u64, Question>, n: u64) -> Result<&Question, String> {
@@ -103,6 +102,6 @@ fn main() {
             println!("Finishing.");
             break;
         }
-        remove_qcand(cands_r, q_num, target_qnum).unwrap();
+        remove_qcand(cands_r, q_num, target_qnum);
     }
 }
