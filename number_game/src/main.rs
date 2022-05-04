@@ -15,18 +15,17 @@ struct Question {
     next: Option<u64>,
 }
 
-fn update_qcands(map: &mut HashMap<u64, Question>, n: u64, q: String) -> &mut HashMap<u64, Question> {
+fn update_qcands(map: &mut HashMap<u64, Question>, n: u64, q: &str) {
     let new_q = Question {
         number: n,
-        question: q,
+        question: q.to_string(),
         next: None,
     };
 
     map.insert(n, new_q);
-    return map;
 }
 
-fn make_qmap_from_file(filename: String) -> std::io::Result<HashMap<u64, Question>> {
+fn make_qmap_from_file(filename: &str) -> std::io::Result<HashMap<u64, Question>> {
     let mut question_cands: HashMap<u64, Question> = HashMap::new();
 
     let file = File::open(filename)?;
@@ -37,7 +36,7 @@ fn make_qmap_from_file(filename: String) -> std::io::Result<HashMap<u64, Questio
         let l = line?;
         let splited = l.split('-').collect::<Vec<_>>();
         if splited.len() == 1 {
-            update_qcands(&mut question_cands, map_idx, splited[0].to_string());
+            update_qcands(&mut question_cands, map_idx, splited[0]);
         } else {
             let i = idx as u64;
             let q_idx = splited[0].parse::<u64>().unwrap();
@@ -45,7 +44,7 @@ fn make_qmap_from_file(filename: String) -> std::io::Result<HashMap<u64, Questio
                 true => if q_idx > map_idx {map_idx = q_idx},
                 false => if i > map_idx {map_idx = i},
             };
-            update_qcands(&mut question_cands, map_idx, splited[1].to_string());
+            update_qcands(&mut question_cands, map_idx, splited[1]);
         }
         map_idx += 1;
     }
@@ -76,7 +75,7 @@ fn get_qcand(map: &HashMap<u64, Question>, n: u64) -> Result<&Question, String> 
 }
 
 fn main() {
-    let mut question_cands = make_qmap_from_file("test.txt".to_string()).unwrap();
+    let mut question_cands = make_qmap_from_file("test.txt").unwrap();
     let cands_length = question_cands.keys().len() as u64;
     let mut rng = rand::thread_rng();
 
